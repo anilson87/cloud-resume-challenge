@@ -1,0 +1,26 @@
+<html>
+    <head>
+        <title>Website Counter</title>
+        <script defer src="index.js"></script>
+        <link rel="stylesheet" href="style.css" />
+    </head>
+    <body>
+        <h1>RESUME</h1>
+        <h2>ANIL YUCEL</h2>
+        <hr />
+        <br>
+        <p class="head"><b>EXPERIENCE</b></p>
+        <br>
+        <hr />
+        <div>Website visit count:</div>
+        <div class="website-counter"></div>
+        <button id="reset">Reset</button>    
+     </body>    
+     <script>
+        fetch('https://3bbqjzgqa5.execute-api.us-east-1.amazonaws.com/prod/my-cloud-resume-put')
+            .then(response => response.json())
+            .then((data) => {
+                document.getElementById('replaceme').innerHTML = data
+        console.log(data)});
+    </script>
+</html>
