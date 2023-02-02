@@ -1,0 +1,76 @@
+name: main
+on: push
+env:
+  GO_VERSION: 1.15.x
+
+jobs:
+  build-infra:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2.1.3
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: test get-function
+        run: cd cloud-resume-challenge/get-function && go test -v ./ && cd ../../
+      - name: test put-function
+        run: cd cloud-resume-challenge/put-function && go test -v ./ && cd ../../
+       
+#
+#
+
+name: Deploy SAM
+on:
+  push:
+    branches:
+      - main
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    
+    # Python unit test
+    - name: Install Python 3.9
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install moto boto3
+    - name: Unittest visitor counter Lambda
+      run: python VisitorCounter/test_visitorCounterLambda.py
+
+    # AWS
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+    
+    - name: SAM Build
+      uses: TractorZoom/sam-cli-action@master
+      with:
+        sam_command: "build -t heyitschris-com-infra.yaml --debug"
+        sam_version: "0.53"
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_DEFAULT_REGION: us-east-1
+
+    - name: SAM Deploy
+      uses: TractorZoom/sam-cli-action@master
+      with:
+        sam_command: "deploy -t heyitschris-com-infra.yaml \
+          --role-arn arn:aws:iam::130783386804:role/CloudFormationDeployS3StaticWebsiteRole \
+          --parameter-overrides ParameterKey=S3BucketName,ParameterValue=heyitschris-com ParameterKey=WebsiteDomainName,ParameterValue=heyitschris.com \
+          --debug \
+          --no-fail-on-empty-changeset"
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_DEFAULT_REGION: us-east-1
